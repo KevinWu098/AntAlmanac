@@ -137,6 +137,9 @@ export function getPredecessorLabel(department: string, courseNumber: string): s
 
 /** Sums grade counts across results and recalculates averageGPA as a weighted mean. */
 export function mergeAggregateGrades(results: NonNullable<AggregateGrades>[]): NonNullable<AggregateGrades> {
+    if (results.length === 0) {
+        throw new Error('mergeAggregateGrades requires at least one result');
+    }
     if (results.length === 1) return results[0];
 
     type GradeDistribution = NonNullable<AggregateGrades>['gradeDistribution'];

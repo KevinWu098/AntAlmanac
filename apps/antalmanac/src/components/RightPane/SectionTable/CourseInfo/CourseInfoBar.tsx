@@ -5,9 +5,19 @@ import { trpc } from '$lib/api/trpc';
 import { getAllSyllabiCourseIds, getPredecessorLabel } from '$lib/courseRenames';
 import { InfoOutlined } from '@mui/icons-material';
 import { Box, Button, Card, CardContent, CardHeader, Divider, Popover, Skeleton, Typography } from '@mui/material';
+import { AAPIError } from '@packages/anteater-api/client';
 import type { PrerequisiteTree } from '@packages/anteater-api/types';
+import { TRPCClientError } from '@trpc/client';
 import { usePostHog } from 'posthog-js/react';
 import { useState } from 'react';
+
+function isCourseNotFound(error: unknown): boolean {
+    if (!(error instanceof TRPCClientError)) {
+        return false;
+    }
+    const cause = error.cause;
+    return cause instanceof AAPIError && cause.status === 404;
+}
 
 const noCourseInfo = {
     id: '',
@@ -78,8 +88,11 @@ export const CourseInfoBar = ({
                     ge_list: res.geList.join(', '),
                 });
                 return;
-            } catch {
-                // course not found under this id — try next
+            } catch (e) {
+                if (!isCourseNotFound(e)) {
+                    setCourseInfo(noCourseInfo);
+                    return;
+                }
             }
         }
 
