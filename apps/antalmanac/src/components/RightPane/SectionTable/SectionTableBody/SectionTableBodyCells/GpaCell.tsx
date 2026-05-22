@@ -15,28 +15,45 @@ export const GpaCell = ({ deptCode, courseNumber, instructors }: GpaCellProps) =
     const isMobile = useIsMobile();
     const theme = useTheme();
     const [anchorEl, setAnchorEl] = useState<Element>();
+    const utils = trpcReact.useUtils();
 
     const namedInstructors = useMemo(() => instructors.filter((i) => i !== 'STAFF'), [instructors]);
 
-    const instructorResults = trpcReact.useQueries((t) =>
-        namedInstructors.map((instructor) =>
-            t.grades.aggregateGrades(
-                { department: deptCode, courseNumber, instructor },
-                { select: (data) => data?.gradeDistribution ?? null }
-            )
-        )
+    const cachedMatch = useMemo(() => {
+        for (const instructor of namedInstructors) {
+            const data = utils.grades.aggregateGrades.getData({
+                department: deptCode,
+                courseNumber,
+                instructor,
+            });
+            const averageGPA = data?.gradeDistribution?.averageGPA;
+            if (averageGPA != null) {
+                return {
+                    instructor,
+                    gpa: averageGPA.toFixed(2),
+                };
+            }
+        }
+
+        return {
+            instructor: namedInstructors[0] ?? '',
+            gpa: null as string | null,
+        };
+    }, [namedInstructors, deptCode, courseNumber, utils]);
+
+    const { data: fetchedDistribution, isLoading } = trpcReact.grades.aggregateGrades.useQuery(
+        { department: deptCode, courseNumber, instructor: cachedMatch.instructor },
+        {
+            enabled: namedInstructors.length > 0 && cachedMatch.gpa == null && Boolean(cachedMatch.instructor),
+            select: (data) => data?.gradeDistribution ?? null,
+            staleTime: Infinity,
+        }
     );
 
-    const loading = instructorResults.some((r) => r.isLoading);
+    const gpa =
+        cachedMatch.gpa ?? (fetchedDistribution?.averageGPA != null ? fetchedDistribution.averageGPA.toFixed(2) : '');
 
-    const { gpa, instructor } = useMemo(() => {
-        const idx = instructorResults.findIndex((r) => r.data?.averageGPA != null);
-        if (idx >= 0) {
-            const avg = instructorResults[idx].data?.averageGPA;
-            return { gpa: avg || avg === 0 ? avg.toFixed(2) : '', instructor: namedInstructors[idx] };
-        }
-        return { gpa: '', instructor: namedInstructors[0] ?? '' };
-    }, [instructorResults, namedInstructors]);
+    const instructor = cachedMatch.instructor;
 
     const handleClick = useCallback((event: React.MouseEvent<HTMLElement>) => {
         setAnchorEl((current) => (current ? undefined : event.currentTarget));
@@ -57,7 +74,7 @@ export const GpaCell = ({ deptCode, courseNumber, instructors }: GpaCellProps) =
                 }}
                 onClick={handleClick}
             >
-                {loading ? null : gpa || 'GPA'}
+                {isLoading ? null : gpa || 'GPA'}
             </ButtonBase>
 
             <Popover

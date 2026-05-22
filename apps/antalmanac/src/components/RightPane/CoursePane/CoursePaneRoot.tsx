@@ -4,9 +4,11 @@ import { SearchForm } from '$components/RightPane/CoursePane/SearchForm/SearchFo
 import RightPaneStore from '$components/RightPane/RightPaneStore';
 import analyticsEnum, { logAnalytics } from '$lib/analytics/analytics';
 import { trpcReact } from '$lib/api/trpc';
+import { clearPrefetchedGradesScopes } from '$lib/grades';
 import { useCoursePaneStore } from '$stores/CoursePaneStore';
 import { openSnackbar } from '$stores/SnackbarStore';
 import { Box } from '@mui/material';
+import { useQueryClient } from '@tanstack/react-query';
 import { usePostHog } from 'posthog-js/react';
 import { useCallback, useEffect } from 'react';
 import { useShallow } from 'zustand/react/shallow';
@@ -24,6 +26,7 @@ export function CoursePaneRoot() {
             }))
         );
     const postHog = usePostHog();
+    const queryClient = useQueryClient();
     const utils = trpcReact.useUtils();
 
     const handleSearch = useCallback(() => {
@@ -48,10 +51,11 @@ export function CoursePaneRoot() {
             category: analyticsEnum.classSearch,
             action: analyticsEnum.classSearch.actions.REFRESH,
         });
+        clearPrefetchedGradesScopes();
         utils.websoc.invalidate();
-        utils.grades.invalidate();
+        void queryClient.invalidateQueries({ queryKey: ['searchResults'] });
         forceUpdate();
-    }, [forceUpdate, postHog, utils]);
+    }, [forceUpdate, postHog, queryClient, utils]);
 
     const handleKeydown = useCallback(
         (event: KeyboardEvent) => {

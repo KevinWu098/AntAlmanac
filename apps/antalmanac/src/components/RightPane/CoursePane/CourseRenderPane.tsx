@@ -9,7 +9,8 @@ import GeDataFetchProvider from '$components/RightPane/SectionTable/GEDataFetchP
 import SectionTable from '$components/RightPane/SectionTable/SectionTable';
 import { WarningAlert } from '$components/WarningAlert';
 import analyticsEnum from '$lib/analytics/analytics';
-import { trpc } from '$lib/api/trpc';
+import { trpc, trpcReact } from '$lib/api/trpc';
+import { prefetchGradesForSearch } from '$lib/grades';
 import { getLocalStorageRecruitmentDismissalTime, setLocalStorageRecruitmentDismissalTime } from '$lib/localStorage';
 import { BLUE, PROJECTS_LINK } from '$src/globals';
 import AppStore from '$stores/AppStore';
@@ -292,6 +293,8 @@ export default function CourseRenderPane(props: { id?: number }) {
     const setHoveredEvent = useHoveredStore((store) => store.setHoveredEvent);
     const filterTakenCourses = usePlannerStore((store) => store.filterTakenCourses);
 
+    const utils = trpcReact.useUtils();
+
     const getQueryParams = useCallback(
         (searchData: CourseSearchParams): WebsocSearchInput => ({
             year: searchData.term.year,
@@ -360,6 +363,16 @@ export default function CourseRenderPane(props: { id?: number }) {
                 }
 
                 setSearchedTerm(RightPaneStore.getFormData().term.longName);
+
+                await prefetchGradesForSearch(
+                    utils,
+                    RightPaneStore.getFormData(),
+                    RightPaneStore.getMultiSearchData()
+                ).catch((error) => {
+                    console.error(error);
+                    openSnackbar('error', 'Error loading grades information');
+                });
+
                 return response;
             } catch (error) {
                 console.error(error);
