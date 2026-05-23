@@ -1,7 +1,7 @@
 import { Button } from '@material-ui/core';
 import WalkIcon from '@material-ui/icons/DirectionsWalk';
 import Leaflet from 'leaflet';
-import React, { ReactElement, useEffect, useRef, useState } from 'react';
+import React, { ReactElement, useEffect, useRef } from 'react';
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 //@ts-ignore
 import { Marker, Popup } from 'react-leaflet';
@@ -38,6 +38,8 @@ const MapMarker = ({
     children,
     openPopup,
 }: MapMarkerProps) => {
+    const markerRef = useRef<Marker | null>(null);
+
     /**@param color rgb hex color string */
     const getMarkerIcon = (color: string) => {
         return Leaflet.divIcon({
@@ -79,8 +81,6 @@ const MapMarker = ({
     } else {
         locationLinkElement = location;
     }
-    
-    const markerRef = useState(useRef(null))[0];
 
     function _openPopup(_markerRef: MarkerRef) {
         // To give the map time to pan
@@ -92,21 +92,25 @@ const MapMarker = ({
 
     useEffect(() => {
         if (openPopup) _openPopup(markerRef);
-    }, [markerRef, openPopup, lat, lng, location]);
+    }, [openPopup, lat, lng, location]);
 
-    function handleKeyPress(event: { key: string; }) {
-        if(event.key === 'Escape' && markerRef.current){
-            //@ts-ignore
-            markerRef.current.leafletElement.closePopup();
+    const closePopupOnEscape = (event: KeyboardEvent) => {
+        if (event.key !== 'Escape' || !markerRef.current) {
+            return;
         }
-        return () => {
-            document.removeEventListener('keydown', handleKeyPress, false)
-        };
-    }
 
-    function escListener () {
-        document.addEventListener('keydown', handleKeyPress, false)
-    }
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+        markerRef.current.leafletElement.closePopup();
+        document.removeEventListener('keydown', closePopupOnEscape);
+    };
+
+    const handlePopupOpen = () => {
+        document.addEventListener('keydown', closePopupOnEscape);
+    };
+
+    const handlePopupClose = () => {
+        document.removeEventListener('keydown', closePopupOnEscape);
+    };
 
     return (
         <Marker
@@ -119,10 +123,9 @@ const MapMarker = ({
                     category: analyticsEnum.map.title,
                     action: analyticsEnum.map.actions.CLICK_PIN,
                 });
-                escListener();
             }}
         >
-            <Popup>
+            <Popup onOpen={handlePopupOpen} onClose={handlePopupClose}>
                 {locationLinkElement}
 
                 <br />

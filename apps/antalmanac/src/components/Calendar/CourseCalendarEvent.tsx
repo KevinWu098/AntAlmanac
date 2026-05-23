@@ -2,8 +2,8 @@ import { Button, IconButton, Paper, Tooltip } from '@material-ui/core';
 import { Theme, withStyles } from '@material-ui/core/styles';
 import { ClassNameMap, Styles } from '@material-ui/core/styles/withStyles';
 import { Delete } from '@material-ui/icons';
+import { KeyboardEvent, useLayoutEffect, useRef } from 'react';
 import { Event } from 'react-big-calendar';
-import { useEffect, useRef } from 'react'; 
 
 import RightPaneStore, { BuildingFocusInfo } from '../RightPane/RightPaneStore';
 import CustomEventDialog from './Toolbar/CustomEventDialog/CustomEventDialog';
@@ -117,34 +117,24 @@ interface CourseCalendarEventProps {
 }
 
 const CourseCalendarEvent = (props: CourseCalendarEventProps) => {
+    const { classes, courseInMoreInfo, closePopover } = props;
+    const paperRef = useRef<HTMLDivElement>(null);
 
-    const paperRef = useRef<HTMLInputElement>(null);
-
-    useEffect(() => {
-      const handleKeyDown = (event: { keyCode: number; }) => {
-        //event.keyCode === 27 reads for the "escape" key
-        if (event.keyCode === 27) {
-          if(paperRef.current)
-                paperRef.current.style.display = 'none';
-        }
-      };
-
-      document.addEventListener('keydown', handleKeyDown);
-
-      return () => {
-        document.removeEventListener('keydown', handleKeyDown);
-      };
+    useLayoutEffect(() => {
+        paperRef.current?.focus();
     }, []);
-    
-    const { classes, courseInMoreInfo } = props;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+        if (event.key === 'Escape') {
+            closePopover();
+        }
+    };
+
     if (!courseInMoreInfo.isCustomEvent) {
         const { term, instructors, sectionCode, title, finalExam, bldg, sectionType } = courseInMoreInfo;
 
         return (
-            <Paper 
-                className={classes.courseContainer}
-                ref={paperRef}
-            >
+            <Paper className={classes.courseContainer} ref={paperRef} tabIndex={-1} onKeyDown={handleKeyDown}>
                 <div className={classes.titleBar}>
                     <span className={classes.title}>{`${title} ${sectionType}`}</span>
                     <Tooltip title="Delete">
@@ -225,10 +215,7 @@ const CourseCalendarEvent = (props: CourseCalendarEventProps) => {
     } else {
         const { title, customEventID } = courseInMoreInfo;
         return (
-            <Paper 
-                className={classes.customEventContainer}
-                ref={paperRef}
-            >
+            <Paper className={classes.customEventContainer} ref={paperRef} tabIndex={-1} onKeyDown={handleKeyDown}>
                 <div className={classes.title}>{title}</div>
                 <div className={classes.buttonBar}>
                     <div className={`${classes.colorPicker}`}>

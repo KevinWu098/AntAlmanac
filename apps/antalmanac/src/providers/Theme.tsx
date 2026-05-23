@@ -1,6 +1,6 @@
 import { createTheme } from '@material-ui/core';
 import { ThemeProvider } from '@material-ui/core/styles';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { isDarkMode } from '$lib/helpers';
 import AppStore from '$stores/AppStore';
@@ -16,48 +16,64 @@ export default function AppThemeProvider(props: Props) {
     const [darkMode, setDarkMode] = useState(isDarkMode());
 
     useEffect(() => {
-        AppStore.on('themeToggle', () => {
+        const handleThemeToggle = () => {
             setDarkMode(isDarkMode());
-        });
-        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+        };
+
+        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        const handleSystemThemeChange = (e: MediaQueryListEvent) => {
             if (AppStore.getTheme() === 'auto') {
                 setDarkMode(e.matches);
             }
-        });
+        };
+
+        AppStore.on('themeToggle', handleThemeToggle);
+        mediaQuery.addEventListener('change', handleSystemThemeChange);
+
+        return () => {
+            AppStore.removeListener('themeToggle', handleThemeToggle);
+            mediaQuery.removeEventListener('change', handleSystemThemeChange);
+        };
     }, []);
 
-    const theme = createTheme({
-        overrides: {
-            MuiCssBaseline: {
-                '@global': {
-                    a: {
-                        color: darkMode ? 'dodgerblue' : 'blue',
+    const theme = useMemo(() => {
+        const htmlFontSize = parseInt(
+            window.getComputedStyle(document.documentElement).getPropertyValue('font-size'),
+            10
+        );
+
+        return createTheme({
+            overrides: {
+                MuiCssBaseline: {
+                    '@global': {
+                        a: {
+                            color: darkMode ? 'dodgerblue' : 'blue',
+                        },
                     },
                 },
             },
-        },
-        typography: {
-            htmlFontSize: parseInt(window.getComputedStyle(document.documentElement).getPropertyValue('font-size'), 10),
-            fontSize:
-                parseInt(window.getComputedStyle(document.documentElement).getPropertyValue('font-size'), 10) * 0.9,
-        },
-        palette: {
-            type: darkMode ? 'dark' : 'light',
-            primary: {
-                light: '#5191d6',
-                main: '#305db7',
-                dark: '#003a75',
-                contrastText: '#fff',
+            typography: {
+                htmlFontSize,
+                fontSize: htmlFontSize * 0.9,
             },
-            secondary: {
-                light: '#ffff52',
-                main: '#ffffff',
-                dark: '#c7a100',
-                contrastText: '#000',
+            palette: {
+                type: darkMode ? 'dark' : 'light',
+                primary: {
+                    light: '#5191d6',
+                    main: '#305db7',
+                    dark: '#003a75',
+                    contrastText: '#fff',
+                },
+                secondary: {
+                    light: '#ffff52',
+                    main: '#ffffff',
+                    dark: '#c7a100',
+                    contrastText: '#000',
+                },
             },
-        },
-        spacing: 4,
-    });
+            spacing: 4,
+        });
+    }, [darkMode]);
 
     return <ThemeProvider theme={theme}>{props.children}</ThemeProvider>;
 }
