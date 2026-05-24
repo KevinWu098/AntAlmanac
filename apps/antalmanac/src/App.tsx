@@ -10,6 +10,16 @@ import Home from './components/Home';
 import AppQueryProvider from './providers/Query';
 import AppThemeProvider from './providers/Theme';
 
+const FEEDBACK_FORM_URL = 'https://forms.gle/k81f2aNdpdQYeKK8A';
+
+function FeedbackRedirect() {
+    useEffect(() => {
+        window.location.replace(FEEDBACK_FORM_URL);
+    }, []);
+
+    return null;
+}
+
 /**
  * renders the single page application
  */
@@ -30,10 +40,7 @@ export default function App() {
                     <BrowserRouter>
                         <Routes>
                             <Route path="/" element={<Home />} />
-                            <Route
-                                path="/feedback"
-                                element={() => window.location.replace('https://forms.gle/k81f2aNdpdQYeKK8A')}
-                            />
+                            <Route path="/feedback" element={<FeedbackRedirect />} />
                         </Routes>
                     </BrowserRouter>
                 </SnackbarProvider>
