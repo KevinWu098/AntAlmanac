@@ -76,14 +76,14 @@ jobs:
         run: echo "apiSubDomain=$apiSubDomain" >> $GITHUB_OUTPUT
 
       - name: upload cdk artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ github.sha }}-cdk
           path: apps/cdk/cdk.out
           retention-days: 1
 
       - name: upload website artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ github.sha }}-website
           path: apps/antalmanac/build
